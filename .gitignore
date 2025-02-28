@@ -21,6 +21,9 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Editor
+.vscode/
+
 # Build artifacts
 *.o
 *.os

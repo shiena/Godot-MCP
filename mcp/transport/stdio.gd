@@ -14,26 +14,29 @@ func start() -> void:
     # Setup stdin reading
     if OS.get_name() != "HTML5":
         OS.set_low_processor_usage_mode(true)
-        
-    # Make sure we can read from stdin without blocking the main thread
-    OS.set_stdin_enabled(true)
     
-    # Start watching for input on a separate thread
-    var thread = Thread.new()
-    thread.start(_read_stdin_thread)
+    # Make sure we can read from stdin without blocking the main thread
+    # We're using the updated method name
+    if OS.get_stdin_type() != OS.STD_HANDLE_INVALID:
+        # Start watching for input on a separate thread
+        var thread = Thread.new()
+        thread.start(_read_stdin_thread)
+    else:
+        _logger.error("Standard input is not available")
 
 func send(message: Dictionary) -> void:
     var json_string = JSON.stringify(message)
     _logger.debug("Sending message: %s" % json_string)
     print(json_string)
     # Ensure output is flushed immediately
-    OS.flush_stdout()
+    # OS.flush_standard_output() doesn't exist, removing this call
+    # The print() function should flush automatically in most cases
 
 func _read_stdin_thread() -> void:
     _logger.debug("Starting stdin reading thread")
-    while OS.get_stdin_enabled():
+    while OS.get_stdin_type() != OS.STD_HANDLE_INVALID:
         # Read one line from stdin
-        var line = OS.get_stdin_line()
+        var line = OS.read_string_from_stdin(8192) # Using a reasonable buffer size
         if line:
             _logger.debug("Received line: %s" % line)
             # Process the line (parse JSON)

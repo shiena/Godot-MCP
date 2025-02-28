@@ -3,11 +3,16 @@ extends RefCounted
 
 signal initialized
 signal closed
+signal server_started
+signal server_stopped
+signal message_processed(message: Dictionary)
 
 var _protocol = MCPProtocol.new()
 var _message_handler = MCPMessageHandler.new()
 var _transport: MCPStdioTransport
 var _logger = MCPLogger.new("MCPServer")
+var _config: Dictionary
+var _tools = {}
 
 # Will be instantiated once the capability managers are created
 var _tool_manager
@@ -59,6 +64,7 @@ func start(transport: MCPStdioTransport) -> void:
     _transport.transport_error.connect(_on_transport_error)
     _transport.start()
     _logger.info("Server started with transport %s" % transport)
+    emit_signal("server_started")
 
 func _on_message_received(message: Dictionary) -> void:
     _logger.debug("Received message: %s" % JSON.stringify(message))
@@ -72,6 +78,8 @@ func _on_message_received(message: Dictionary) -> void:
     else:
         # It's a notification
         _handle_notification(message)
+    
+    emit_signal("message_processed", message)
 
 func _handle_request(request: Dictionary) -> Dictionary:
     # Validate request format
@@ -159,6 +167,7 @@ func close() -> void:
     _is_initialized = false
     _transport = null
     emit_signal("closed")
+    emit_signal("server_stopped")
 
 # Tool registration
 func register_tool(tool_data: MCPTypes.MCPTool) -> void:
@@ -171,3 +180,11 @@ func register_resource(resource_data: MCPTypes.MCPResource) -> void:
 # Prompt registration
 func register_prompt(prompt_data: MCPTypes.MCPPrompt) -> void:
     _prompt_manager.register_prompt(prompt_data)
+
+# Set the transport manually
+func set_transport(t) -> void:
+    _transport = t
+    if _transport:
+        _logger.debug("Transport set to %s" % _transport)
+    else:
+        _logger.warning("Transport cleared")
